@@ -1,13 +1,14 @@
-Working with AWS Lambda
-Overview
+## **Working with AWS Lambda**
+
+## **Overview**
 
 This project demonstrates how to deploy and configure an AWS Lambda-based serverless computing solution that generates a daily sales analysis report.
-The solution automatically pulls data from a café database running on an EC2 LAMP instance, formats the results, and sends a report by email using Amazon SNS.
+The solution automatically pulls data from a café database running on an EC2 LAMP stack (Linux, Apache, MySQL, and PHP) deployed on an Amazon EC2 instance, which is a virtual server in the cloud. LAMP instance, formats the results, and sends a report by email using Amazon SNS.
 It includes two Lambda functions, an SNS topic for notifications, and a CloudWatch Events (EventBridge) rule that triggers execution on a schedule.
 
-🎯 Objectives & Learning Outcomes
+## **Objectives & Learning Outcomes**
 
-After completing this lab, you will be able to:
+After completing this lab,I was able to:
 
 Identify IAM roles and permissions required for Lambda functions to access AWS resources.
 
@@ -23,9 +24,11 @@ Configure CloudWatch Events (EventBridge) to invoke Lambda on a schedule.
 
 Use CloudWatch Logs to troubleshoot function execution and performance.
 
-🏗️ AWS-Style Architecture Diagram
+## **Architecture Diagram**
 
-Workflow Summary
+<img width="1024" height="517" alt="ChatGPT Image Nov 10, 2025, 06_03_54 AM" src="https://github.com/user-attachments/assets/139cd15e-24e8-4c1a-8c84-fbb5a9f65b5b" />
+
+### Workflow Summary
 
 CloudWatch Events / EventBridge triggers the salesAnalysisReport Lambda function daily at 8 PM (Mon–Sat).
 
@@ -39,24 +42,26 @@ salesAnalysisReport formats the report and publishes it to an SNS topic.
 
 The SNS topic sends the report email to the administrator.
 
-💻 Commands & Configuration Steps (Copy-All)
-# 1️⃣ Configure AWS CLI credentials on the CLI Host instance
+## **Commands & Configuration Steps**
+
+```bash
+# Configure AWS CLI credentials on the CLI Host instance
 aws configure
 # Provide AccessKey, SecretKey, Region (us-west-2), and output (json)
 
-# 2️⃣ Verify files exist
+# Verify files exist
 cd activity-files
 ls
 # Expect: salesAnalysisReport-v2.zip, pymysql-v3.zip, salesAnalysisReportDataExtractor-v3.zip
 
-# 3️⃣ Create Lambda Layer for PyMySQL
+# Create Lambda Layer for PyMySQL
 aws lambda publish-layer-version \
   --layer-name pymysqlLibrary \
   --description "PyMySQL library modules" \
   --zip-file fileb://pymysql-v3.zip \
   --compatible-runtimes python3.9
 
-# 4️⃣ Create Data Extractor Function
+# Create Data Extractor Function
 aws lambda create-function \
   --function-name salesAnalysisReportDataExtractor \
   --runtime python3.9 \
@@ -69,14 +74,14 @@ aws lambda update-function-configuration \
   --function-name salesAnalysisReportDataExtractor \
   --layers arn:aws:lambda:us-west-2:<account-id>:layer:pymysqlLibrary:1
 
-# 5️⃣ Test Extractor Function with DB credentials
+# Test Extractor Function with DB credentials
 # Replace placeholder values with Parameter Store outputs
 aws lambda invoke \
   --function-name salesAnalysisReportDataExtractor \
   --payload '{"dbUrl":"<url>","dbName":"<name>","dbUser":"<user>","dbPassword":"<pwd>"}' \
   response.json
 
-# 6️⃣ Create SNS Topic and Subscription
+# Create SNS Topic and Subscription
 aws sns create-topic --name salesAnalysisReportTopic
 aws sns subscribe \
   --topic-arn arn:aws:sns:us-west-2:<account-id>:salesAnalysisReportTopic \
@@ -85,7 +90,7 @@ aws sns subscribe \
 
 # Confirm the subscription in your inbox.
 
-# 7️⃣ Create Main Lambda Function (salesAnalysisReport)
+# Create Main Lambda Function (salesAnalysisReport)
 aws lambda create-function \
   --function-name salesAnalysisReport \
   --runtime python3.9 \
@@ -99,7 +104,7 @@ aws lambda update-function-configuration \
   --function-name salesAnalysisReport \
   --environment Variables="{topicARN=arn:aws:sns:us-west-2:<account-id>:salesAnalysisReportTopic}"
 
-# 8️⃣ Create CloudWatch Event Rule for Schedule Trigger (Mon–Sat, 8 PM UTC)
+# Create CloudWatch Event Rule for Schedule Trigger (Mon–Sat, 8 PM UTC)
 aws events put-rule \
   --name salesAnalysisReportDailyTrigger \
   --schedule-expression "cron(0 20 ? * MON-SAT *)" \
@@ -109,16 +114,27 @@ aws events put-rule \
 aws events put-targets \
   --rule salesAnalysisReportDailyTrigger \
   --targets "Id"="1","Arn"="arn:aws:lambda:us-west-2:<account-id>:function:salesAnalysisReport"
+```
 
-🖼️ Screenshots to Include
-#	Screenshot Name	Description
-1️⃣	iam-roles-lambda.png	IAM roles showing salesAnalysisReportRole and salesAnalysisReportDERole.
-2️⃣	lambda-layer-created.png	Confirmation of pymysqlLibrary Lambda layer.
-3️⃣	data-extractor-test-success.png	Successful output from salesAnalysisReportDataExtractor.
-4️⃣	sns-topic-and-subscription.png	SNS topic with confirmed email subscription.
-5️⃣	sales-report-lambda-success.png	Test results showing report sent successfully.
-6️⃣	daily-email-report.png	Screenshot of “Daily Sales Analysis Report” email received.
-⚙️ Tools Used
+## **Screenshots**
+
+IAM roles showing salesAnalysisReportRole and salesAnalysisReportDERole.
+<img width="1408" height="284" alt="lab 178_1" src="https://github.com/user-attachments/assets/f25a53e1-a937-4e04-8cc3-f8ae355a5819" />
+
+Confirmation of pymysqlLibrary Lambda layer.
+<img width="1747" height="353" alt="178_2" src="https://github.com/user-attachments/assets/cecc178a-d664-4d80-8d7e-8f5a02953d55" />
+
+Successful output from salesAnalysisReportDataExtractor.
+<img width="1759" height="625" alt="178_4" src="https://github.com/user-attachments/assets/e58a4b46-b82f-4bb3-b60b-b5e541567e1e" />
+
+SNS topic with confirmed email subscription.
+<img width="903" height="435" alt="178_6" src="https://github.com/user-attachments/assets/891b3bf4-937d-4e41-bb53-b15545b21e79" />
+
+Test results showing report sent successfully.
+<img width="1055" height="464" alt="178_7" src="https://github.com/user-attachments/assets/bf0079cc-3bf8-4d0a-b7e2-d068fa4176e9" />
+
+
+## **Tools Used**
 
 AWS Lambda – Serverless functions execution
 
@@ -132,7 +148,7 @@ Amazon EC2 (LAMP) – Application database backend
 
 AWS CLI & IAM – Deployment and permissions
 
-🧾 Key Takeaways
+## **Key Takeaways**
 
 Lambda layers streamline dependency management and code reuse.
 
@@ -144,7 +160,7 @@ SNS integration turns Lambda output into real-time notifications.
 
 CloudWatch logs simplify debugging and performance analysis.
 
-🪄 What Actually Happened
+## **What Actually Happened**
 
 Created IAM roles with the correct trust policies and permissions.
 
@@ -166,11 +182,12 @@ Added a CloudWatch Events rule to trigger the function on a schedule.
 
 Confirmed daily report delivery via email.
 
-🗣️ How to Explain It to an Interviewer
 
-“I deployed a serverless reporting solution using AWS Lambda. One function extracted sales data from an EC2-hosted MySQL database, while another formatted and emailed daily reports through SNS. I created a Lambda layer for PyMySQL, configured IAM roles for permissions, and scheduled the Lambda function via CloudWatch Events. When triggered, the main function invoked the extractor, retrieved the data, and published a formatted report to the SNS topic. This design fully automated daily reporting without managing servers.”
+## **Author**
 
-👩🏽‍💻 Author
+Amarachi Emeziem (Amara) 
 
-Amarachi Emeziem (Amara) – Cloud Security & AWS Engineer
-GitHub Profile: @Amara-lorritta
+Cloud Security & AWS Engineer
+
+LinkedIn profile: https://www.linkedin.com/in/amarachilemeziem/
+
